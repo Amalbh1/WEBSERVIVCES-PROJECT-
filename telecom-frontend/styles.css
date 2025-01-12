@@ -1,0 +1,96 @@
+/* General styles */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+}
+
+/* Container for the login form */
+#login-container {
+    width: 300px;
+    margin: 100px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+.predict-container{
+display: grid;
+align-items: center;
+justify-content: center;
+flex-direction: column;
+height: 100vh;
+overflow: hidden;
+gap: 20px;
+}
+h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* Form elements */
+form div {
+    margin-bottom: 10px;
+}
+
+label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+#predictForm{
+    width: 100%;
+    overflow: hidden;
+}
+#predictForm input{
+    width: 95%;
+    border-radius: 4px;
+   padding: 10px;
+    margin: 0;
+    outline: none;
+    border: solid 1px #0056b3;
+   
+
+}
+
+/* Login button */
+button[type="submit"] {
+    width: 100%;
+    padding: 10px;
+    background-color: #007BFF; /* Blue */
+    color: white;
+    font-size: 16px;
+    border: none;
+    border-radius: 4px;
+    transition: ease-in-out 300ms background-color;
+    cursor: pointer;
+}
+
+button[type="submit"]:hover {
+    background-color: #0056b3;
+}
+
+/* Error message styling */
+#error-message {
+    display: none;
+    color: red; /* Change error text color to red */
+    font-size: 14px;
+    text-align: center;
+    margin-top: 10px;
+}
+
+#back-btn{
+    padding: 8px 16px;
+    border:#007BFF solid 1px ;
+    color:black;
+    border-radius: 4px;
+    transition: ease-in 300ms all;
+}
+#back-btn:hover{
+   
+    color:rgb(255, 255, 255);
+    background-color: #007BFF;
+    
+ 
+}
