@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+@keyframes lightline {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Text Styling with Animation */
+.lightline-text {
+    font-size: 2rem;
+    font-weight: bold;
+    color: transparent;
+    background-image: linear-gradient(90deg, #0f48f0 25%, #08c41b 50%);
+    background-size: 200% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    animation: lightline 3s linear infinite;
+}
