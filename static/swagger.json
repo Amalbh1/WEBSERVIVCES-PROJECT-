@@ -1,0 +1,363 @@
+{
+    "swagger": "2.0",
+    "info": {
+      "title": "Telecom Usage API",
+      "description": "API to predict telecom data usage.",
+      "version": "1.0.0"
+    },
+    "paths": {
+      "/api/health": {
+        "get": {
+          "summary": "Health check",
+          "description": "Check if the API is running",
+          "responses": {
+            "200": {
+              "description": "API is running",
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "message": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/admin/register": {
+        "post": {
+          "summary": "Register an admin",
+          "description": "Allows an admin to register users with specific roles.",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "body",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "name": "username",
+              "in": "body",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "name": "password",
+              "in": "body",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "name": "phone_number",
+              "in": "body",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "name": "role",
+              "in": "body",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "responses": {
+            "201": {
+              "description": "User created successfully"
+            },
+            "400": {
+              "description": "Invalid input"
+            },
+            "500": {
+              "description": "Internal server error"
+            }
+          }
+        }
+      },
+      "/api/register": {
+        "post": {
+          "summary": "Register a user",
+          "description": "Allows a user to register with specific roles.",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "body",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "name": "username",
+              "in": "body",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "name": "password",
+              "in": "body",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "name": "phone_number",
+              "in": "body",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "name": "role",
+              "in": "body",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "responses": {
+            "201": {
+              "description": "User created successfully"
+            },
+            "400": {
+              "description": "Invalid input"
+            },
+            "500": {
+              "description": "Internal server error"
+            }
+          }
+        }
+      },
+      "/api/login": {
+        "post": {
+          "summary": "Login a user",
+          "description": "Allows a user to login and receive an authentication token.",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "body",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "name": "password",
+              "in": "body",
+              "required": true,
+              "type": "string"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Login successful",
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "access_token": {
+                    "type": "string"
+                  },
+                  "user": {
+                    "type": "object",
+                    "properties": {
+                      "user_id": {
+                        "type": "string"
+                      },
+                      "username": {
+                        "type": "string"
+                      },
+                      "role": {
+                        "type": "string"
+                      },
+                      "phone_number": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "Invalid credentials"
+            }
+          }
+        }
+      },
+      "/api/telecom-usage/{history_id}": {
+        "get": {
+          "summary": "Fetch telecom usage data",
+          "description": "Fetch telecom usage data for a specific user based on history_id.",
+          "parameters": [
+            {
+              "name": "history_id",
+              "in": "path",
+              "required": true,
+              "type": "integer"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Telecom usage data",
+              "schema": {
+                "type": "object"
+              }
+            },
+            "403": {
+              "description": "Forbidden"
+            },
+            "404": {
+              "description": "Record not found"
+            }
+          }
+        }
+      },
+      "/api/change-password": {
+        "put": {
+          "summary": "Change user password",
+          "description": "Allows users or admins to change a user's password.",
+          "parameters": [
+            {
+              "name": "old_password",
+              "in": "body",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "name": "new_password",
+              "in": "body",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "name": "user_id",
+              "in": "body",
+              "required": false,
+              "type": "integer"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Password changed successfully"
+            },
+            "400": {
+              "description": "Incorrect old password"
+            },
+            "404": {
+              "description": "User not found"
+            },
+            "500": {
+              "description": "Internal server error"
+            }
+          }
+        }
+      },
+      "/api/predict/{user_id}": {
+        "post": {
+          "summary": "Predict data usage",
+          "description": "Predict the telecom data usage for a user based on historical data.",
+          "parameters": [
+            {
+              "name": "user_id",
+              "in": "path",
+              "required": true,
+              "type": "integer"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Predicted data usage",
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "predicted_usage": {
+                    "type": "number"
+                  },
+                  "suggestion": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Forbidden"
+            },
+            "404": {
+              "description": "User not found"
+            },
+            "500": {
+              "description": "Internal server error"
+            }
+          }
+        }
+      },
+      "/api/manage-user/{user_id}": {
+        "get": {
+          "summary": "Get user details",
+          "description": "Fetch details of a user by user_id.",
+          "parameters": [
+            {
+              "name": "user_id",
+              "in": "path",
+              "required": true,
+              "type": "integer"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "User details",
+              "schema": {
+                "type": "object"
+              }
+            },
+            "404": {
+              "description": "User not found"
+            },
+            "403": {
+              "description": "Forbidden"
+            }
+          }
+        },
+        "put": {
+          "summary": "Update user details",
+          "description": "Update user details, including username, phone number, role, and password.",
+          "parameters": [
+            {
+              "name": "user_id",
+              "in": "path",
+              "required": true,
+              "type": "integer"
+            },
+            {
+              "name": "username",
+              "in": "body",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "name": "phone_number",
+              "in": "body",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "name": "role",
+              "in": "body",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "name": "password",
+              "in": "body",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "User updated successfully"
+            },
+            "404": {
+              "description": "User not found"
+            },
+            "500": {
+              "description": "Internal server error"
+            }
+          }
+        }
+      }
+    }
+  }
+  

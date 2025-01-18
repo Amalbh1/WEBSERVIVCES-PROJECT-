@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request
-
+from flask_swagger_ui import get_swaggerui_blueprint
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_bcrypt import Bcrypt
 from sqlalchemy.exc import SQLAlchemyError
@@ -8,6 +8,7 @@ from config import DevelopmentConfig  # Ensure correct config is imported
 from utils import role_required  # Import the role_required decorator
 from prediction import predict_usage, get_holidays  # Import the prediction logic
 import math
+
 from flask_cors import CORS
 
 # Initialize Flask app
@@ -18,7 +19,13 @@ bcrypt = Bcrypt(app)
 
 # Configure the app to use the database and JWT
 app.config.from_object(DevelopmentConfig)
-
+# Swagger Configuration
+SWAGGER_URL = '/swagger'
+API_URL = '/static/swagger.json'  # Location of your Swagger API definition
+swagger_ui_blueprint = get_swaggerui_blueprint(SWAGGER_URL, API_URL, config={
+    'app_name': "Telecom Usage Predictor API"
+})
+app.register_blueprint(swagger_ui_blueprint, url_prefix=SWAGGER_URL)
 # Initialize extensions
 db.init_app(app)
 jwt = JWTManager(app)
@@ -108,19 +115,17 @@ def login():
     user = User.query.filter_by(username=username).first()
 
     if user and bcrypt.check_password_hash(user.password, password):
-        # Check if the role is None and handle it
-        role = user.role.value if user.role else 'user'  # Default to 'user' if role is None
-
-        # Ensure that the id is passed as an integer in the token
+      
+        role = user.role.value if user.role else 'user'  
+        
         token = create_access_token(identity={"username": username, "role": role, "id": user.id, "phone_number": user.phone_number})
         
-        # Include user details in the response
         user_info = {
             "user_id": user.id,
             "username": user.username,
             "role": role,
             "phone_number": user.phone_number
-            # Add any other user details you want to include
+           
         }
 
         return jsonify({"access_token": token, "user": user_info}), 200
@@ -136,7 +141,7 @@ def login():
 def get_usage(history_id):
     current_user = get_jwt_identity()
 
-    # Admins can access any user's data
+    
     if current_user["role"] == "admin":
         
         usage_record = TelecomUsage.query.filter_by(user_id=history_id).first()
@@ -147,7 +152,7 @@ def get_usage(history_id):
        
         return jsonify(result), 200
 
-    # Users can only access their own data
+    
     elif current_user["role"] == "user":
         
         usage_record = TelecomUsage.query.filter_by(user_id=history_id).first()
@@ -157,7 +162,7 @@ def get_usage(history_id):
         result = usage_record.as_dict()
         return jsonify(result), 200
 
-    # Fallback for undefined roles
+    
     return jsonify({"message": "Access forbidden"}), 403
 
 # Change user password (Admin can update any user's password, Users can only update their own password)
@@ -170,12 +175,12 @@ def change_password():
     old_password = data.get("old_password")
     new_password = data.get("new_password")
 
-    # If the user is admin, they can update any user's password
+    
     if current_user["role"] == "admin":
         user_id = data.get("user_id")
         user = User.query.filter_by(id=user_id).first()
     else:
-        # Users can only change their own password
+        
         user = User.query.filter_by(id=current_user["id"]).first()
 
     if not user:
@@ -196,10 +201,10 @@ def change_password():
 
 
 def generate_suggestion(predicted_usage):
-    # Round the predicted usage up to the nearest multiple of 10
+    
     rounded_usage = math.ceil(predicted_usage / 10) * 10
     
-    # Create the suggestion with the rounded value
+   
     suggested_offer = f"We suggest the {rounded_usage}GB plan for the next month. Would you like to proceed with this offer?"
 
     return suggested_offer
@@ -223,7 +228,7 @@ def predict_usage_api(user_id):
     if current_user["role"] == "user" and current_user["id"] != user_id:
         return jsonify({"message": "You can only predict your own data"}), 403
 
-    # Fetch user usage data from the last 11 months
+    
     user_usage = TelecomUsage.query.filter_by(user_id=user_id).first()
     if not user_usage:
         return jsonify({"message": "User data not found"}), 404
@@ -244,7 +249,7 @@ def predict_usage_api(user_id):
     # Generate the suggestion
     suggested_offer = generate_suggestion(predicted_usage)
     
-    # Save predicted usage and suggestion in the database
+   
     try:
         user_usage.predicted_usage = predicted_usage
         user_usage.suggestion = suggested_offer  # Save the suggestion
@@ -268,27 +273,27 @@ def manage_user(user_id):
     if current_user["role"] != "admin":
         return jsonify({"message": "Access forbidden: Admins only"}), 403
 
-    # Fetch user from database by user_id
+    
     user = User.query.filter_by(id=user_id).first()
 
     if not user:
         return jsonify({"message": "User not found"}), 404
 
     if request.method == "GET":
-        # Return user details
+        
         return jsonify(user.as_dict()), 200
 
     if request.method == "PUT":
-        # Parse request data for update
+     
         data = request.get_json()
 
-        # Update user details (ensure proper validation in production)
+       
         user.username = data.get("username", user.username)
   
         user.phone_number = data.get("phone_number", user.phone_number)
         user.role = data.get("role", user.role)
 
-        # Update password if provided
+      
         if "password" in data:
             hashed_password = bcrypt.generate_password_hash(data["password"]).decode('utf-8')
             user.password = hashed_password
