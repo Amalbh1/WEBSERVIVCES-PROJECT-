@@ -2,7 +2,9 @@ import joblib
 import numpy as np
 from datetime import datetime
 import requests
-
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
 # Load the trained Random Forest model
 MODEL_PATH = 'data/rf_model.pkl'
 
@@ -26,6 +28,29 @@ def get_holidays(year=2020, country="TN"):
     else:
         print(f"Error fetching holiday data: {response.status_code}")
         return []
+
+def train_model(data, target):
+    """Train a Random Forest model."""
+    try:
+        # Split the data into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(data, target, test_size=0.2, random_state=42)
+        
+        # Train the Random Forest model
+        rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
+        rf_model.fit(X_train, y_train)
+        
+        # Evaluate the model
+        predictions = rf_model.predict(X_test)
+        mse = mean_squared_error(y_test, predictions)
+        print(f"Model trained successfully with MSE: {mse}")
+        
+        # Save the model
+        joblib.dump(rf_model, MODEL_PATH)
+        print(f"Model saved at {MODEL_PATH}")
+        return rf_model
+    except Exception as e:
+        print(f"Error during model training: {e}")
+        return None
 
 
 def predict_usage(input_data, holidays):

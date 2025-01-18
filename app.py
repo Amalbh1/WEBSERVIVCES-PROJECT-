@@ -22,7 +22,7 @@ app.config.from_object(DevelopmentConfig)
 # Initialize extensions
 db.init_app(app)
 jwt = JWTManager(app)
-CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})  # Update the allowed origin
+CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173/"}})  # Update the allowed origin
 
 
 # Initialize migration
@@ -33,11 +33,41 @@ migrate = Migrate(app, db)
 @app.route("/api/health", methods=["GET"])
 def health_check():
     return jsonify({"message": "API is running"}), 200
+@app.route("/api/admin/register", methods=["POST"])
+ # Only admins can register users with specific roles
+@jwt_required()
+@role_required('admin') 
+def registerAdmin():
+    data = request.get_json()
+    user_id = data.get("id")
+    username = data.get("username")
+    password = data.get("password")
+    phone_number = data.get("phone_number")
+    role = data.get("role")  # Default to "user" if no role is provided
+
+    if not user_id or not username or not password or not phone_number:
+        return jsonify({"message": "ID, username, password, and phone number are required"}), 400
+
+    if User.query.filter_by(username=username).first():
+        return jsonify({"message": "Username already exists"}), 400
+
+    if User.query.filter_by(phone_number=phone_number).first():
+        return jsonify({"message": "Phone number already exists"}), 400
+
+    hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+    new_user = User(id=user_id, username=username, password=hashed_password, phone_number=phone_number, role=role)
+
+    try:
+        db.session.add(new_user)
+        db.session.commit()
+        return jsonify({"message": "User created successfully!"}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Error: {str(e)}"}), 500
 
 # User registration route - Only accessible by Admin
 @app.route("/api/register", methods=["POST"])
-@jwt_required()
-@role_required('admin')  # Only admins can register users with specific roles
+ # Only admins can register users with specific roles
 def register():
     data = request.get_json()
     user_id = data.get("id")
@@ -82,13 +112,14 @@ def login():
         role = user.role.value if user.role else 'user'  # Default to 'user' if role is None
 
         # Ensure that the id is passed as an integer in the token
-        token = create_access_token(identity={"username": username, "role": role, "id": user.id})
+        token = create_access_token(identity={"username": username, "role": role, "id": user.id, "phone_number": user.phone_number})
         
         # Include user details in the response
         user_info = {
             "user_id": user.id,
             "username": user.username,
             "role": role,
+            "phone_number": user.phone_number
             # Add any other user details you want to include
         }
 
@@ -100,29 +131,34 @@ def login():
 
 
 # Fetch telecom usage data (Admin can access all users' data, Users can only access their own data)
-@app.route("/api/telecom-usage", methods=["GET"])
+@app.route("/api/telecom-usage/<int:history_id>", methods=["GET"])
 @jwt_required()
-def get_usage():
+def get_usage(history_id):
     current_user = get_jwt_identity()
 
-    # Admins can access all users' data
+    # Admins can access any user's data
     if current_user["role"] == "admin":
-        usage_records = TelecomUsage.query.all()
-        result = [record.as_dict() for record in usage_records]
+        
+        usage_record = TelecomUsage.query.filter_by(user_id=history_id).first()
+        if not usage_record:
+            return jsonify({"message": "Record not found"}), 404
+      
+        result = usage_record.as_dict()
+       
         return jsonify(result), 200
-    
+
     # Users can only access their own data
-    if current_user["role"] == "user":
-        user_usage = TelecomUsage.query.filter_by(user_id=current_user["id"]).first()
+    elif current_user["role"] == "user":
+        
+        usage_record = TelecomUsage.query.filter_by(user_id=history_id).first()
+        if not usage_record:
+            return jsonify({"message": "You are not authorized to access this record or it does not exist"}), 403
 
-        if not user_usage:
-            return jsonify({"message": "User data not found"}), 404
-
-        result = user_usage.as_dict()
+        result = usage_record.as_dict()
         return jsonify(result), 200
 
+    # Fallback for undefined roles
     return jsonify({"message": "Access forbidden"}), 403
-
 
 # Change user password (Admin can update any user's password, Users can only update their own password)
 @app.route("/api/change-password", methods=["PUT"])
@@ -130,7 +166,7 @@ def get_usage():
 def change_password():
     current_user = get_jwt_identity()
     data = request.get_json()
-
+    print(f"data: {data}")
     old_password = data.get("old_password")
     new_password = data.get("new_password")
 
@@ -169,11 +205,10 @@ def generate_suggestion(predicted_usage):
     return suggested_offer
 
 # Predict data usage and save it to the database (with holiday detection)
-@app.route("/api/predict", methods=["POST"]) 
+@app.route("/api/predict/<int:user_id>", methods=["POST"])
 @jwt_required()
-def predict_usage_api():
-    data = request.get_json()
-    user_id = data.get("user_id")
+def predict_usage_api(user_id):
+   
 
     if not user_id:
         return jsonify({"message": "User ID is required"}), 400
@@ -224,7 +259,46 @@ def predict_usage_api():
     except SQLAlchemyError as e:
         db.session.rollback()
         return jsonify({"message": f"Error saving predicted usage and suggestion: {str(e)}"}), 500
+@app.route("/api/manage-user/<int:user_id>", methods=["GET", "PUT"])
+@jwt_required()
+def manage_user(user_id):
+    current_user = get_jwt_identity()
 
+    # Ensure only admin can access this endpoint
+    if current_user["role"] != "admin":
+        return jsonify({"message": "Access forbidden: Admins only"}), 403
+
+    # Fetch user from database by user_id
+    user = User.query.filter_by(id=user_id).first()
+
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+
+    if request.method == "GET":
+        # Return user details
+        return jsonify(user.as_dict()), 200
+
+    if request.method == "PUT":
+        # Parse request data for update
+        data = request.get_json()
+
+        # Update user details (ensure proper validation in production)
+        user.username = data.get("username", user.username)
+  
+        user.phone_number = data.get("phone_number", user.phone_number)
+        user.role = data.get("role", user.role)
+
+        # Update password if provided
+        if "password" in data:
+            hashed_password = bcrypt.generate_password_hash(data["password"]).decode('utf-8')
+            user.password = hashed_password
+
+        try:
+            db.session.commit()
+            return jsonify({"message": "User updated successfully"}), 200
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            return jsonify({"message": f"Error: {str(e)}"}), 500
 # Run the app
 if __name__ == "__main__":
     app.run(debug=True)
