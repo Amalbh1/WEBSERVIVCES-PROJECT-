@@ -11,7 +11,7 @@ import math
 
 from flask_cors import CORS
 
-# Initialize Flask app
+# Initialize Flask app..
 app = Flask(__name__)
 CORS(app)
 # Initialize Bcrypt for password hashing
